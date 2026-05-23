@@ -265,7 +265,7 @@
 <div id="root"></div>
 
 <script type="text/babel">
-const { useState, useCallback } = React;
+const { useState, useCallback, useEffect } = React;
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
@@ -1013,12 +1013,31 @@ Please assess this submission and give a verdict.`;
 
 // ─── APP ROOT ─────────────────────────────────────────────────────────────────
 
-const DEFAULT_GEMINI_KEY = 'AIzaSyAiYuWVVN21tPW28xNq6qqprdx3CtyKOcY';
+const DEFAULT_GEMINI_KEY = '';
 
 function App() {
   const [tab, setTab] = useState('recommender');
   const [apiKey, setApiKey] = useState(DEFAULT_GEMINI_KEY);
   const [showSettings, setShowSettings] = useState(false);
+
+  useEffect(() => {
+    async function fetchKey() {
+      try {
+        const resp = await fetch('/.env');
+        if (resp.ok) {
+          const text = await resp.text();
+          const match = text.match(/GEMINI_API_KEY\s*=\s*['"]?([a-zA-Z0-9_-]+)['"]?/);
+          if (match && match[1]) {
+            setApiKey(match[1]);
+            console.log("✓ Loaded Gemini API Key from local .env");
+          }
+        }
+      } catch (err) {
+        console.log("Local .env file not found or couldn't be parsed.");
+      }
+    }
+    fetchKey();
+  }, []);
 
   return (
     <div className="min-h-screen font-inter">
