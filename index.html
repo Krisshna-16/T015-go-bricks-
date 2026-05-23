@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GO-BRICS Task Intelligence Tool</title>
+  <meta name="description" content="AI-powered task recommendation and GBP audit checker for GO-BRICS Business Lab participants." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            inter: ['Inter', 'sans-serif'],
+            orbitron: ['Orbitron', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            matrix: { DEFAULT: '#00FF41', dim: '#00CC33', dark: '#003D0F', glow: '#39FF14' },
+            void: { DEFAULT: '#000000', surface: '#070d07', card: '#0a130a', border: '#0f2a0f' },
+          },
+          animation: {
+            'pulse-green': 'pulseGreen 2s ease-in-out infinite',
+            'flicker': 'flicker 4s linear infinite',
+            'scanline': 'scanline 6s linear infinite',
+            'slide-up': 'slideUp 0.4s ease-out',
+            'fade-in': 'fadeIn 0.5s ease-out',
+            'glow-pulse': 'glowPulse 2.5s ease-in-out infinite',
+            'spin-slow': 'spin 1.2s linear infinite',
+          },
+          keyframes: {
+            pulseGreen: { '0%,100%': { opacity: '0.6' }, '50%': { opacity: '1' } },
+            flicker: { '0%,98%,100%': { opacity: '1' }, '99%': { opacity: '0.85' } },
+            scanline: { '0%': { transform: 'translateY(-100%)' }, '100%': { transform: 'translateY(100vh)' } },
+            slideUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+            fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+            glowPulse: { '0%,100%': { boxShadow: '0 0 8px rgba(0,255,65,0.3)' }, '50%': { boxShadow: '0 0 24px rgba(0,255,65,0.7)' } },
+          },
+          boxShadow: {
+            'matrix': '0 0 20px rgba(0,255,65,0.2), 0 0 40px rgba(0,255,65,0.08)',
+            'matrix-strong': '0 0 30px rgba(0,255,65,0.4), 0 0 60px rgba(0,255,65,0.15)',
+            'matrix-inner': 'inset 0 0 20px rgba(0,255,65,0.05)',
+            'card': '0 4px 24px rgba(0,0,0,0.6), 0 0 1px rgba(0,255,65,0.1)',
+            'verdict-green': '0 0 30px rgba(0,255,65,0.3)',
+            'verdict-amber': '0 0 30px rgba(255,170,0,0.3)',
+            'verdict-red': '0 0 30px rgba(255,50,50,0.3)',
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; padding: 0;
+      background-color: #000;
+      font-family: 'Inter', sans-serif;
+      color: #e8e8e8;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Matrix rain grid overlay */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,255,65,0.03) 40px),
+        repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,255,65,0.02) 40px);
+      pointer-events: none;
+    }
+
+    /* Vignette */
+    body::after {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.85) 100%);
+      pointer-events: none;
+    }
+
+    #root { position: relative; z-index: 1; }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #000; }
+    ::-webkit-scrollbar-thumb { background: #00FF41; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #39FF14; }
+
+    /* Glassmorphism card */
+    .glass-card {
+      background: rgba(7, 13, 7, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 255, 65, 0.12);
+    }
+
+    /* Glowing text */
+    .text-glow { text-shadow: 0 0 12px rgba(0, 255, 65, 0.8), 0 0 24px rgba(0, 255, 65, 0.4); }
+    .text-glow-sm { text-shadow: 0 0 6px rgba(0, 255, 65, 0.6); }
+
+    /* Matrix input */
+    .matrix-input {
+      background: rgba(0, 20, 0, 0.8);
+      border: 1px solid rgba(0, 255, 65, 0.2);
+      color: #e8e8e8;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+    .matrix-input:focus {
+      border-color: #00FF41;
+      box-shadow: 0 0 0 2px rgba(0, 255, 65, 0.15), 0 0 12px rgba(0, 255, 65, 0.1);
+    }
+    .matrix-input::placeholder { color: rgba(0, 255, 65, 0.3); }
+
+    /* Matrix checkbox */
+    .matrix-checkbox input[type="checkbox"] {
+      appearance: none; -webkit-appearance: none;
+      width: 16px; height: 16px; min-width: 16px;
+      border: 1px solid rgba(0,255,65,0.35);
+      background: rgba(0,20,0,0.6);
+      border-radius: 3px;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.15s;
+    }
+    .matrix-checkbox input[type="checkbox"]:checked {
+      background: #00FF41;
+      border-color: #00FF41;
+    }
+    .matrix-checkbox input[type="checkbox"]:checked::after {
+      content: '✓';
+      position: absolute; top: -1px; left: 2px;
+      color: #000; font-size: 11px; font-weight: 800;
+    }
+    .matrix-checkbox input[type="checkbox"]:hover {
+      border-color: #00FF41;
+      box-shadow: 0 0 6px rgba(0,255,65,0.3);
+    }
+
+    /* Matrix button */
+    .matrix-btn {
+      background: linear-gradient(135deg, #00FF41 0%, #00CC33 100%);
+      color: #000;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .matrix-btn::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .matrix-btn:hover { box-shadow: 0 0 24px rgba(0,255,65,0.5), 0 4px 16px rgba(0,255,65,0.2); transform: translateY(-1px); }
+    .matrix-btn:hover::before { opacity: 1; }
+    .matrix-btn:active { transform: translateY(0); }
+    .matrix-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* Tab */
+    .tab-btn {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .tab-btn.active {
+      color: #00FF41;
+    }
+    .tab-btn.active::after {
+      content: '';
+      position: absolute; bottom: -1px; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #00FF41, transparent);
+      box-shadow: 0 0 8px rgba(0,255,65,0.6);
+    }
+
+    /* Spinner */
+    @keyframes spinnerPulse {
+      0% { transform: rotate(0deg); box-shadow: 0 0 10px rgba(0,255,65,0.4); }
+      50% { box-shadow: 0 0 20px rgba(0,255,65,0.8); }
+      100% { transform: rotate(360deg); box-shadow: 0 0 10px rgba(0,255,65,0.4); }
+    }
+    .matrix-spinner {
+      width: 40px; height: 40px;
+      border: 2px solid rgba(0,255,65,0.1);
+      border-top: 2px solid #00FF41;
+      border-right: 2px solid rgba(0,255,65,0.5);
+      border-radius: 50%;
+      animation: spinnerPulse 1.2s linear infinite;
+    }
+
+    /* Blink cursor */
+    @keyframes blink { '0%,100%': { opacity: 1; } '50%': { opacity: 0; } }
+    .cursor-blink { animation: blink 1s step-end infinite; }
+
+    /* Task card hover */
+    .task-card {
+      transition: all 0.25s ease;
+      border: 1px solid rgba(0,255,65,0.1);
+    }
+    .task-card:hover {
+      border-color: rgba(0,255,65,0.3);
+      box-shadow: 0 0 20px rgba(0,255,65,0.12), 0 4px 24px rgba(0,0,0,0.6);
+      transform: translateY(-2px);
+    }
+
+    /* Stretch goal shimmer */
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    .stretch-shimmer {
+      background: linear-gradient(90deg, rgba(0,255,65,0.05) 0%, rgba(0,255,65,0.15) 50%, rgba(0,255,65,0.05) 100%);
+      background-size: 200% auto;
+      animation: shimmer 3s linear infinite;
+    }
+
+    /* Grade badges */
+    .grade-s { background: linear-gradient(135deg, #FFD700, #FF8C00); color: #000; }
+    .grade-a { background: linear-gradient(135deg, #00FF41, #00CC33); color: #000; }
+    .grade-b { background: linear-gradient(135deg, #00BFFF, #0080FF); color: #000; }
+    .grade-c { background: linear-gradient(135deg, #A855F7, #7C3AED); color: #fff; }
+    .grade-d { background: linear-gradient(135deg, #6B7280, #4B5563); color: #fff; }
+
+    /* Verdict badge */
+    .verdict-eligible {
+      background: rgba(0,255,65,0.15); border: 1px solid #00FF41; color: #00FF41;
+      text-shadow: 0 0 8px rgba(0,255,65,0.6);
+    }
+    .verdict-needs {
+      background: rgba(255,170,0,0.15); border: 1px solid #FFAA00; color: #FFAA00;
+      text-shadow: 0 0 8px rgba(255,170,0,0.6);
+    }
+    .verdict-not {
+      background: rgba(255,50,50,0.15); border: 1px solid #FF3232; color: #FF3232;
+      text-shadow: 0 0 8px rgba(255,50,50,0.6);
+    }
+
+    /* Section label */
+    .section-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: rgba(0,255,65,0.5);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useCallback } = React;
+
+// ─── CONSTANTS ───────────────────────────────────────────────────────────────
+
+const DEPARTMENTS = ['Tech','Product Research','Production Research','Sales','Content','Operations'];
+const SKILLS = [
+  'Python/Scripting','Research','Writing/Copywriting','Design','Video Editing',
+  'Sales/Outreach','API/Developer','CRM Tools','Prompt Engineering',
+  'Spreadsheets/Data','Social Media','Presentation/Decks',
+  'Logistics/Supply Chain','Automation Tools','Project Management'
+];
+const HOURS_OPTIONS = ['1–3 hrs','3–6 hrs','6–10 hrs','10+ hrs'];
+const PROOF_OPTIONS = [
+  'Screenshot','Document/Report','Live URL','Video Recording',
+  'Email/WhatsApp confirmation','Signed agreement','Spreadsheet file','Other'
+];
+
+const TASK_CATALOGUE = `
+TECH DEPARTMENT:
+- T01: Digital Tools Setup | Grade D | 30 GBP | 1–2 hrs | Skills: basic computer skills | Cap: 2x/month
+- T02: Tech Stack Research Report | Grade D | 35 GBP | 1–2 hrs | Skills: research, tech literacy | Cap: 3x/month
+- T03: Data Collection and Cleaning Script | Grade C | 55 GBP | 2–3 hrs | Skills: Python, JavaScript, or spreadsheets | Cap: 2x/month
+- T04: API Integration Tested and Documented | Grade C | 60 GBP | 2–4 hrs | Skills: API/developer experience | Cap: 2x/month
+- T05: CRM System Set Up and Customised | Grade C | 65 GBP | 3–4 hrs | Skills: CRM tools | Cap: 1x/month
+- T06: Website Performance Audit | Grade B | 80 GBP | 2–3 hrs | Skills: web/SEO knowledge | Cap: 2x/month
+- T07: Email Automation Sequence Set Up | Grade B | 70 GBP | 2–4 hrs | Skills: email marketing/automation | Cap: 2x/month
+- T08: Team Communication Workspace Configured | Grade B | 90 GBP | 3–4 hrs | Skills: platform admin (Slack/Discord) | Cap: 1x/month
+- T09: Product Landing Page Built and Deployed | Grade B | 110 GBP | 4–6 hrs | Skills: web building | Cap: 1x/month
+- T10: Social Media Analytics Tool Built | Grade B | 120 GBP | 4–6 hrs | Skills: analytics/data tools | Unique
+- T11: AI Chatbot Prompt Setup | Grade A | 200 GBP | 4–6 hrs | Skills: AI/prompt engineering | Unique
+- T12: Custom Automation Workflow Built | Grade A | 170 GBP | 5–7 hrs | Skills: automation platforms | Cap: 2x/month
+- T13: Full Tech Infrastructure Audit and Roadmap | Grade A | 160 GBP | 6–8 hrs | Skills: broad technical + systems thinking | Tech Lead approval needed | Unique
+- T14: Integrated Tech Stack Deployed | Grade S | 380 GBP | 12–18 hrs | Skills: senior technical | Tech Lead + Chief Admin approval | One-Time
+- T15: AI-Powered Internal Tool Built and Deployed | Grade S | 450 GBP | 15–20 hrs | Skills: AI development, prompt engineering, API integration | Tech Lead approval needed | One-Time
+
+PRODUCT RESEARCH DEPARTMENT:
+- PR01: Competitor Product Benchmarking Report | Grade D | 30 GBP | 1–2 hrs | Skills: research | Cap: 3x/month
+- PR02: Market Demand Validation Report | Grade C | 60 GBP | 3–4 hrs | Skills: market research/analytical | Cap: 1x/month
+- PR03: Product Feature Specification Document | Grade B | 90 GBP | 3–5 hrs | Skills: technical writing/product development | Cap: 1x/month
+- PR04: Consumer Persona and Insight Report | Grade A | 160 GBP | 5–7 hrs | Skills: market research/consumer behaviour | Cap: 1x/month
+- PR05: Full Product Research Dossier | Grade S | 320 GBP | 12–18 hrs | Skills: must have completed PR02 and PR03 | Ops approval needed | One-Time
+
+PRODUCTION RESEARCH DEPARTMENT:
+- PP01: Supplier Directory Compiled | Grade D | 35 GBP | 1–2 hrs | Skills: research | Cap: 3x/month
+- PP02: Manufacturing Process Research Report | Grade C | 55 GBP | 2–4 hrs | Skills: research/technical comprehension | Cap: 2x/month
+- PP03: Supply Chain Route Analysis | Grade B | 100 GBP | 4–5 hrs | Skills: logistics/trade/supply chain | Cap: 1x/month
+- PP04: Production Feasibility and Unit Cost Report | Grade A | 170 GBP | 6–8 hrs | Skills: costing/manufacturing/business analysis | Cap: 1x/month
+- PP05: End-to-End Production Blueprint | Grade S | 350 GBP | 15–20 hrs | Skills: must have completed PP02, PP03, PP04 | Ops + Chief Admin approval needed | One-Time
+
+SALES DEPARTMENT:
+- S01: B2B Lead List Compiled | Grade D | 30 GBP | 1–2 hrs | Skills: basic research | Cap: 3x/month
+- S02: Cold Outreach Scripts Drafted | Grade D | 35 GBP | 1–2 hrs | Skills: written communication | Cap: 2x/month
+- S03: B2B Marketplace Profile Optimised | Grade C | 50 GBP | 2–3 hrs | Skills: IndiaMART/TradeIndia/Alibaba familiarity | Cap: 1x/month
+- S04: LinkedIn B2B Outreach Campaign Executed | Grade C | 55 GBP | 2–3 hrs | Skills: LinkedIn/B2B communication | Cap: 2x/month
+- S05: Target Industry Segment Research Report | Grade C | 60 GBP | 3–4 hrs | Skills: research/analytical | Cap: 1x/month
+- S06: B2B Meeting Successfully Booked | Grade B | 80 GBP | ongoing | Skills: outreach | Unlimited
+- S07: B2B Partnership Proposal Deck Created | Grade B | 100 GBP | 4–6 hrs | Skills: business communication/presentation | Unique
+- S08: Retailer or Distributor Formally Onboarded | Grade B | 120 GBP | variable | Skills: must have completed S06 | Unlimited
+- S09: B2B CRM Pipeline Built and Populated | Grade A | 150 GBP | 5–7 hrs | Skills: CRM/sales pipeline management | Unique
+- S10: Letter of Intent or MOU Secured | Grade A | 200 GBP | variable | Skills: must be at negotiation stage | Unlimited
+- S11: B2B Sales Presentation Delivered to Live Prospect | Grade A | 180 GBP | 1–2 hrs prep + live | Skills: presenting to business audiences | Unlimited
+- S12: First Confirmed Purchase Order Received | Grade S | 350 GBP | variable | Skills: must have completed S08 | Unlimited
+- S13: Strategic B2B Partnership Agreement Closed | Grade S | 500 GBP | multi-week | Skills: senior sales capacity | Sales Lead approval needed | One-Time
+
+CONTENT DEPARTMENT:
+- C01: Social Media Posts Published | Grade D | 30 GBP | 1–2 hrs | Skills: social media | Cap: 3x/month
+- C02: Product Descriptions Written | Grade D | 35 GBP | 1–2 hrs | Skills: writing | Cap: 3x/month
+- C03: Short-Form Video Created | Grade C | 50 GBP | 2–3 hrs | Skills: video editing | Cap: 2x/month
+- C04: Blog Article Written and Published | Grade C | 55 GBP | 2–4 hrs | Skills: writing/research | Cap: 2x/month
+- C05: Branded Email Newsletter Designed | Grade C | 60 GBP | 2–3 hrs | Skills: design/copywriting | Cap: 2x/month
+- C06: 30-Day Content Calendar Built | Grade B | 80 GBP | 3–4 hrs | Skills: content strategy/planning | Cap: 1x/month
+- C07: Competitor Content Audit Completed | Grade B | 90 GBP | 3–5 hrs | Skills: analytical/research | Cap: 1x/month
+- C08: Influencer Research List Compiled | Grade B | 100 GBP | 3–4 hrs | Skills: social media platform knowledge | Cap: 1x/month
+- C09: Video Ad Script and Storyboard Produced | Grade A | 150 GBP | 4–6 hrs | Skills: scriptwriting/storytelling | Cap: 2x/month
+- C10: Influencer Outreach Campaign Executed | Grade A | 170 GBP | 3–4 hrs + follow-up | Skills: must have completed C08 or approved list | Cap: 1x/month
+- C11: Full Product Launch Content Pack Delivered | Grade A | 200 GBP | 6–8 hrs | Skills: multi-format content creation | Unique
+- C12: Content Piece Achieves 10K Organic Reach | Grade S | 350 GBP | variable | Skills: published content on brand account | Unlimited
+- C13: Brand Content and Style Guidebook Created | Grade S | 400 GBP | 8–12 hrs | Skills: branding/design/content strategy | Content Lead approval needed | One-Time
+
+OPERATIONS DEPARTMENT:
+- O01: Team Activity Report Submitted | Grade D | 25 GBP | 30–60 mins | Skills: any participant | Cap: 1x/week per team
+- O02: Meeting Formally Documented | Grade D | 30 GBP | 30 mins | Skills: any participant | Unlimited
+- O03: Standard Operating Procedure Written | Grade C | 50 GBP | 2–3 hrs | Skills: process documentation | Cap: 2x/month
+- O04: Onboarding Package Prepared | Grade C | 55 GBP | 2–3 hrs | Skills: organisational/communication | Cap: 1x/month
+- O05: Team Budget Tracker Built | Grade C | 60 GBP | 2–3 hrs | Skills: spreadsheets/financial tracking | Cap: 1x/month
+- O06: Risk Register Created | Grade B | 80 GBP | 3–4 hrs | Skills: strategic thinking/project management | Cap: 1x/month
+- O07: Cross-Team Coordination Session Facilitated | Grade B | 90 GBP | 1hr prep + 1hr session | Skills: facilitation/leadership | Cap: 2x/month
+- O08: Vendor or Tool Research Report Completed | Grade B | 100 GBP | 3–5 hrs | Skills: research/evaluation | Cap: 1x/month
+- O09: Full Team Performance Dashboard Built | Grade A | 150 GBP | 5–7 hrs | Skills: data/dashboard building | Unique
+- O10: Complete Operations Playbook Delivered | Grade A | 160 GBP | 7–10 hrs | Skills: documentation/process design | Ops Lead approval needed | Unique
+- O11: Admin Audit Report — GBP Accuracy Verified | Grade A | 180 GBP | 5–6 hrs | Skills: high trust rating + Ops Lead approval only | One-Time
+- O12: Cross-Team Systems Integration Delivered | Grade S | 300 GBP | 10–15 hrs | Skills: advanced operational/systems thinking | Ops + Chief Admin approval needed | One-Time
+`;
+
+const RECOMMENDER_SYSTEM_PROMPT = `You are the GO-BRICS Task Intelligence Assistant. Your job is to recommend the best tasks from the GO-BRICS Business Lab Task Catalogue based on a participant's skills, available time, and completed tasks.
+
+Here is the full task catalogue:
+${TASK_CATALOGUE}
+
+RULES FOR RECOMMENDATIONS:
+1. Only recommend tasks the participant is eligible for based on their skills and selected departments
+2. Check time fit — do not recommend tasks that exceed their available hours unless flagged as a stretch goal
+3. Check prerequisites — if a task requires a prior task to be completed, only recommend it if it appears in their completed tasks list
+4. Rank recommendations by: eligibility fit first, then GBP value
+5. Return exactly 5 recommended tasks
+6. For each task include: Task ID, Task Name, GBP value, estimated time, why it fits this participant, what proof they will need to submit, and one tip for completing it well
+7. At the end, include a 'Stretch Goal' — one higher-grade task they could work towards with their current skill set
+8. Be encouraging, specific, and practical. Address the participant by their name.
+
+IMPORTANT: You MUST respond with valid JSON only. No markdown, no explanations outside JSON. Use this exact schema:
+{
+  "greeting": "A brief encouraging 1-2 sentence greeting addressing the participant by name",
+  "recommendations": [
+    {
+      "taskId": "T01",
+      "taskName": "Task Name Here",
+      "grade": "D",
+      "gbp": 30,
+      "time": "1–2 hrs",
+      "fitReason": "Why this task suits this participant specifically",
+      "proofNeeded": "What they need to submit as evidence",
+      "tip": "One specific, actionable tip to complete this well"
+    }
+  ],
+  "stretchGoal": {
+    "taskId": "T11",
+    "taskName": "Task Name Here",
+    "grade": "A",
+    "gbp": 200,
+    "time": "4–6 hrs",
+    "description": "Why this is a great stretch goal and what skills they need to develop"
+  }
+}`;
+
+const AUDIT_SYSTEM_PROMPT = `You are the GO-BRICS GBP Audit Assistant. Your job is to assess whether a participant's task submission meets the proof and completion requirements listed in the official GO-BRICS Business Lab Task Catalogue, and give them a clear, honest eligibility verdict.
+
+Here is the full task catalogue:
+${TASK_CATALOGUE}
+
+For the task the participant has submitted, do the following:
+1. Identify the task from the Task ID provided
+2. State the official proof requirements for that task
+3. Compare what the participant says they have done and what proof they have ticked against the official requirements
+4. Give a clear verdict in one of three categories: ELIGIBLE, NEEDS MORE, or NOT ELIGIBLE
+5. Give a GBP estimate: full GBP if eligible, 0 if not eligible, or a note if partial credit may apply
+6. End with one specific, actionable tip to strengthen the submission
+
+Be direct, fair, and helpful. Address the participant by name. Do not be harsh — be a constructive reviewer.
+
+IMPORTANT: You MUST respond with valid JSON only. No markdown, no explanations outside JSON. Use this exact schema:
+{
+  "participantName": "Name",
+  "taskId": "T03",
+  "taskName": "Full Task Name",
+  "grade": "C",
+  "officialGbp": 55,
+  "verdict": "ELIGIBLE",
+  "officialRequirements": "Description of what's officially required for this task",
+  "submissionAssessment": "Assessment of what they submitted vs what's required",
+  "gapAnalysis": ["Gap point 1 if any", "Gap point 2 if any"],
+  "gbpEstimate": 55,
+  "gbpNote": "Full payment of 55 GBP — all requirements met.",
+  "tip": "One specific, actionable improvement tip"
+}
+
+Note: verdict must be exactly one of: "ELIGIBLE", "NEEDS MORE", or "NOT ELIGIBLE"`;
+
+// ─── UTILS ───────────────────────────────────────────────────────────────────
+
+function extractAndParseJSON(text) {
+  // Strip markdown code fences
+  let cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+  // Find first { and last }
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  if (start === -1 || end === -1) throw new Error('No JSON object found in response');
+  cleaned = cleaned.slice(start, end + 1);
+  return JSON.parse(cleaned);
+}
+
+function gradeClass(grade) {
+  const g = (grade || '').toUpperCase();
+  if (g === 'S') return 'grade-s';
+  if (g === 'A') return 'grade-a';
+  if (g === 'B') return 'grade-b';
+  if (g === 'C') return 'grade-c';
+  return 'grade-d';
+}
+
+// ─── SUB-COMPONENTS ──────────────────────────────────────────────────────────
+
+function CheckboxGroup({ label, items, selected, onChange }) {
+  const toggle = (item) => {
+    if (selected.includes(item)) onChange(selected.filter(i => i !== item));
+    else onChange([...selected, item]);
+  };
+  return (
+    <div>
+      <p className="section-label mb-2">{label}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+        {items.map(item => (
+          <label key={item} className="matrix-checkbox flex items-center gap-2 cursor-pointer group">
+            <input type="checkbox" checked={selected.includes(item)} onChange={() => toggle(item)} />
+            <span className="text-xs text-gray-300 group-hover:text-[#00FF41] transition-colors leading-tight">{item}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 gap-6 animate-fade-in">
+      <div className="relative">
+        <div className="matrix-spinner" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-2 h-2 rounded-full bg-[#00FF41] animate-pulse-green" />
+        </div>
+      </div>
+      <div className="text-center">
+        <p className="font-mono text-[#00FF41] text-sm text-glow-sm tracking-widest">
+          GO-BRICS AI is thinking
+          <span className="cursor-blink">_</span>
+        </p>
+        <p className="text-gray-500 text-xs mt-1 font-inter">Analysing your profile against the task catalogue…</p>
+      </div>
+    </div>
+  );
+}
+
+function ErrorState({ message, onDismiss }) {
+  return (
+    <div className="animate-slide-up glass-card rounded-xl p-5 border border-red-500/30 bg-red-950/20">
+      <div className="flex items-start gap-3">
+        <div className="w-6 h-6 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <span className="text-red-400 text-xs font-bold">!</span>
+        </div>
+        <div className="flex-1">
+          <p className="text-red-400 font-semibold text-sm mb-1">Connection Error</p>
+          <p className="text-gray-400 text-xs leading-relaxed">{message}</p>
+          <p className="text-gray-500 text-xs mt-2">💡 Check your API key in Settings, then try again.</p>
+        </div>
+        <button onClick={onDismiss} className="text-gray-600 hover:text-gray-300 text-lg leading-none">×</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── TASK CARD ────────────────────────────────────────────────────────────────
+
+function TaskCard({ task, index }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div
+      className="task-card glass-card rounded-xl overflow-hidden animate-slide-up"
+      style={{ animationDelay: `${index * 0.08}s` }}
+    >
+      {/* Header */}
+      <div className="px-5 pt-5 pb-3">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-mono text-[#00FF41] text-xs font-semibold text-glow-sm tracking-widest">{task.taskId}</span>
+            <span className={`text-[10px] font-black px-2 py-0.5 rounded-sm ${gradeClass(task.grade)}`}>
+              GRADE {task.grade}
+            </span>
+          </div>
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            <span className="font-orbitron text-[#00FF41] font-bold text-lg text-glow leading-none">£{task.gbp}</span>
+            <span className="text-gray-500 text-[10px]">{task.time}</span>
+          </div>
+        </div>
+        <h3 className="font-semibold text-white text-sm leading-snug">{task.taskName}</h3>
+      </div>
+
+      {/* Fit reason */}
+      <div className="px-5 pb-3">
+        <p className="section-label mb-1">WHY IT FITS YOU</p>
+        <p className="text-gray-300 text-xs leading-relaxed">{task.fitReason}</p>
+      </div>
+
+      {/* Expandable: proof + tip */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full px-5 py-2 text-left flex items-center justify-between border-t border-[#00FF41]/10 hover:bg-[#00FF41]/5 transition-colors"
+      >
+        <span className="text-[#00FF41]/60 text-[10px] font-mono tracking-wider">{expanded ? '▲ HIDE DETAILS' : '▼ PROOF & TIP'}</span>
+      </button>
+      {expanded && (
+        <div className="px-5 pb-4 space-y-3 animate-fade-in">
+          <div>
+            <p className="section-label mb-1">PROOF REQUIRED</p>
+            <p className="text-gray-300 text-xs leading-relaxed">{task.proofNeeded}</p>
+          </div>
+          <div className="bg-[#00FF41]/5 border border-[#00FF41]/15 rounded-lg p-3">
+            <p className="section-label mb-1">💡 TIP</p>
+            <p className="text-[#00FF41]/80 text-xs leading-relaxed">{task.tip}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── STRETCH GOAL CARD ────────────────────────────────────────────────────────
+
+function StretchGoalCard({ goal }) {
+  return (
+    <div className="animate-slide-up" style={{ animationDelay: '0.5s' }}>
+      <div className="section-label mb-3 flex items-center gap-2">
+        <span className="text-[#FFD700]">★</span> STRETCH GOAL
+      </div>
+      <div className="relative glass-card rounded-xl overflow-hidden border border-[#FFD700]/25 shadow-[0_0_30px_rgba(255,215,0,0.08)]">
+        <div className="stretch-shimmer absolute inset-0 pointer-events-none" />
+        <div className="relative p-5">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-mono text-[#FFD700] text-xs font-semibold tracking-widest">{goal.taskId}</span>
+              <span className="grade-s text-[10px] font-black px-2 py-0.5 rounded-sm">GRADE {goal.grade}</span>
+            </div>
+            <span className="font-orbitron text-[#FFD700] font-bold text-xl" style={{ textShadow: '0 0 12px rgba(255,215,0,0.6)' }}>£{goal.gbp}</span>
+          </div>
+          <h3 className="font-semibold text-white text-sm mb-2">{goal.taskName}</h3>
+          <p className="text-gray-300 text-xs leading-relaxed">{goal.description}</p>
+          <div className="mt-3 flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#FFD700] animate-pulse-green" />
+            <p className="text-[#FFD700]/50 text-[10px] font-mono">Est. {goal.time} · Work towards this!</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── AUDIT RESULT CARD ────────────────────────────────────────────────────────
+
+function AuditResultCard({ result }) {
+  const verdictKey = (result.verdict || '').toUpperCase();
+  const isEligible = verdictKey === 'ELIGIBLE';
+  const isNeeds = verdictKey === 'NEEDS MORE';
+  const verdictClass = isEligible ? 'verdict-eligible' : isNeeds ? 'verdict-needs' : 'verdict-not';
+  const verdictIcon = isEligible ? '✓' : isNeeds ? '△' : '✕';
+  const gbpColor = isEligible ? '#00FF41' : isNeeds ? '#FFAA00' : '#FF3232';
+
+  return (
+    <div className="animate-slide-up space-y-4">
+      {/* Task Header */}
+      <div className="glass-card rounded-xl p-5">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="font-mono text-[#00FF41] text-xs font-semibold text-glow-sm tracking-widest">{result.taskId}</span>
+              <span className={`text-[10px] font-black px-2 py-0.5 rounded-sm ${gradeClass(result.grade)}`}>GRADE {result.grade}</span>
+            </div>
+            <h3 className="font-semibold text-white text-base">{result.taskName}</h3>
+            <p className="text-gray-500 text-xs mt-0.5">Submitted by {result.participantName}</p>
+          </div>
+          <div className="text-right">
+            <p className="section-label mb-1">OFFICIAL VALUE</p>
+            <p className="font-orbitron text-white text-xl font-bold">£{result.officialGbp}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Verdict */}
+      <div className={`glass-card rounded-xl p-5 ${verdictKey === 'ELIGIBLE' ? 'shadow-verdict-green' : verdictKey === 'NEEDS MORE' ? 'shadow-verdict-amber' : 'shadow-verdict-red'}`}>
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold flex-shrink-0 ${verdictClass}`}>
+            {verdictIcon}
+          </div>
+          <div className="flex-1">
+            <p className="section-label mb-0.5">VERDICT</p>
+            <p className={`font-orbitron font-bold text-xl ${verdictClass.includes('eligible') ? 'text-[#00FF41]' : verdictClass.includes('needs') ? 'text-[#FFAA00]' : 'text-[#FF3232]'}`}
+               style={{ textShadow: `0 0 12px ${gbpColor}55` }}>
+              {result.verdict}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="section-label mb-0.5">GBP ESTIMATE</p>
+            <p className="font-orbitron font-bold text-2xl" style={{ color: gbpColor, textShadow: `0 0 12px ${gbpColor}66` }}>
+              £{result.gbpEstimate}
+            </p>
+            <p className="text-gray-500 text-[10px] mt-0.5 max-w-[160px] text-right">{result.gbpNote}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Official Requirements */}
+      <div className="glass-card rounded-xl p-5">
+        <p className="section-label mb-2">OFFICIAL REQUIREMENTS</p>
+        <p className="text-gray-300 text-xs leading-relaxed">{result.officialRequirements}</p>
+      </div>
+
+      {/* Assessment */}
+      <div className="glass-card rounded-xl p-5">
+        <p className="section-label mb-2">SUBMISSION ASSESSMENT</p>
+        <p className="text-gray-300 text-xs leading-relaxed">{result.submissionAssessment}</p>
+        {result.gapAnalysis && result.gapAnalysis.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            {result.gapAnalysis.map((gap, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <span className="text-[#FFAA00] text-xs mt-0.5 flex-shrink-0">▸</span>
+                <p className="text-gray-400 text-xs">{gap}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Tip */}
+      <div className="bg-[#00FF41]/5 border border-[#00FF41]/20 rounded-xl p-4">
+        <p className="section-label mb-2">💡 ACTIONABLE TIP</p>
+        <p className="text-[#00FF41]/80 text-xs leading-relaxed">{result.tip}</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── GEMINI API HELPER (auto-fallback across models) ─────────────────────────
+
+const GEMINI_MODELS = [
+  { name: 'gemini-2.5-flash', systemSupport: true },
+  { name: 'gemini-2.0-flash', systemSupport: true },
+  { name: 'gemini-1.5-flash', systemSupport: true },
+  { name: 'gemini-1.5-pro',   systemSupport: true },
+];
+
+async function callGeminiModel(apiKey, model, systemPrompt, userMessage, maxTokens) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.name}:generateContent?key=${apiKey}`;
+  const body = model.systemSupport
+    ? {
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.7 },
+      }
+    : {
+        contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\n---\n\n${userMessage}` }] }],
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.7 },
+      };
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!resp.ok) {
+    const errData = await resp.json().catch(() => ({}));
+    throw new Error(errData?.error?.message || `HTTP ${resp.status}`);
+  }
+  const data = await resp.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  if (!text) throw new Error('Empty response');
+  return text;
+}
+
+async function callGemini(apiKey, systemPrompt, userMessage, maxTokens = 2048) {
+  let lastError;
+  for (const model of GEMINI_MODELS) {
+    try {
+      const text = await callGeminiModel(apiKey, model, systemPrompt, userMessage, maxTokens);
+      console.log(`✓ GO-BRICS: using ${model.name}`);
+      return text;
+    } catch (err) {
+      console.warn(`✗ ${model.name}: ${err.message}`);
+      lastError = err;
+    }
+  }
+  throw new Error(`Could not connect. ${lastError?.message || 'Check your API key.'}`);
+}
+
+// ─── SETTINGS PANEL ───────────────────────────────────────────────────────────
+
+function SettingsPanel({ apiKey, setApiKey, show, setShow }) {
+  return (
+    <div className="mb-6">
+      <button
+        onClick={() => setShow(!show)}
+        className="flex items-center gap-2 text-gray-600 hover:text-[#00FF41] text-[10px] font-mono tracking-wider transition-colors"
+      >
+        <span>{show ? '▲' : '▼'}</span>
+        API CONFIGURATION {apiKey ? '(Gemini key set ✓)' : '(no key — add one below)'}
+      </button>
+      {show && (
+        <div className="mt-2 glass-card rounded-xl p-4 border-[#00FF41]/10 animate-fade-in">
+          <p className="section-label mb-2">GOOGLE GEMINI API KEY</p>
+          <p className="text-gray-500 text-[10px] mb-3 leading-relaxed">
+            Free key from <span className="text-[#00FF41]/60">aistudio.google.com</span> — 1,500 free requests/day. No credit card needed.
+          </p>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={e => setApiKey(e.target.value)}
+            placeholder="AIzaSy..."
+            className="matrix-input w-full rounded-lg px-3 py-2 text-xs font-mono"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── RECOMMENDER VIEW ─────────────────────────────────────────────────────────
+
+function RecommenderView({ apiKey }) {
+  const [name, setName] = useState('');
+  const [departments, setDepartments] = useState([]);
+  const [skills, setSkills] = useState([]);
+  const [hours, setHours] = useState('');
+  const [completed, setCompleted] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [result, setResult] = useState(null);
+
+  const handleSubmit = useCallback(async (e) => {
+    e.preventDefault();
+    if (!name.trim()) { setError('Please enter your name.'); return; }
+    if (departments.length === 0) { setError('Please select at least one department.'); return; }
+    if (skills.length === 0) { setError('Please select at least one skill.'); return; }
+    if (!hours) { setError('Please select your available hours.'); return; }
+    if (!apiKey.trim()) { setError('No API key found. Open API Configuration above and paste your Gemini key.'); return; }
+
+    setLoading(true); setError(null); setResult(null);
+
+    const userMessage = `Participant Name: ${name}
+Departments they can work in: ${departments.join(', ')}
+Skills: ${skills.join(', ')}
+Hours available this week: ${hours}
+Tasks already completed: ${completed.trim() || 'None'}
+
+Please recommend 5 tasks for this participant and provide a stretch goal.`;
+
+    try {
+      const rawText = await callGemini(apiKey.trim(), RECOMMENDER_SYSTEM_PROMPT, userMessage, 2048);
+      const parsed = extractAndParseJSON(rawText);
+      setResult(parsed);
+    } catch (err) {
+      setError(err.message || 'An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [name, departments, skills, hours, completed, apiKey]);
+
+  return (
+    <div className="space-y-6">
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="glass-card rounded-2xl p-6 space-y-5">
+        <div>
+          <label className="section-label block mb-2">YOUR NAME</label>
+          <input
+            type="text"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="e.g. Sarah Johnson"
+            className="matrix-input w-full rounded-lg px-4 py-2.5 text-sm"
+          />
+        </div>
+
+        <CheckboxGroup label="DEPARTMENTS YOU CAN WORK IN" items={DEPARTMENTS} selected={departments} onChange={setDepartments} />
+        <CheckboxGroup label="YOUR SKILLS" items={SKILLS} selected={skills} onChange={setSkills} />
+
+        <div>
+          <label className="section-label block mb-2">HOURS AVAILABLE THIS WEEK</label>
+          <select
+            value={hours}
+            onChange={e => setHours(e.target.value)}
+            className="matrix-input w-full rounded-lg px-4 py-2.5 text-sm cursor-pointer"
+          >
+            <option value="">Select availability…</option>
+            {HOURS_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+          </select>
+        </div>
+
+        <div>
+          <label className="section-label block mb-2">TASKS ALREADY COMPLETED (OPTIONAL)</label>
+          <input
+            type="text"
+            value={completed}
+            onChange={e => setCompleted(e.target.value)}
+            placeholder="e.g. T01, T03, S01"
+            className="matrix-input w-full rounded-lg px-4 py-2.5 text-sm"
+          />
+          <p className="text-gray-600 text-[10px] mt-1 font-mono">Separate task IDs with commas</p>
+        </div>
+
+        {error && (
+          <ErrorState message={error} onDismiss={() => setError(null)} />
+        )}
+
+        <button type="submit" disabled={loading} className="matrix-btn w-full py-3.5 rounded-xl text-sm">
+          {loading ? '⟳ Processing…' : '⚡ Get My Task Recommendations'}
+        </button>
+      </form>
+
+      {/* Results */}
+      {loading && <LoadingState />}
+
+      {result && !loading && (
+        <div className="space-y-4 animate-fade-in">
+          {/* Greeting */}
+          {result.greeting && (
+            <div className="glass-card rounded-xl p-4 border border-[#00FF41]/15">
+              <p className="text-[#00FF41]/80 text-sm leading-relaxed">{result.greeting}</p>
+            </div>
+          )}
+
+          {/* Task Cards */}
+          <div>
+            <p className="section-label mb-3">RECOMMENDED TASKS · {result.recommendations?.length || 0} MATCHES</p>
+            <div className="space-y-3">
+              {(result.recommendations || []).map((task, i) => (
+                <TaskCard key={task.taskId || i} task={task} index={i} />
+              ))}
+            </div>
+          </div>
+
+          {/* Stretch Goal */}
+          {result.stretchGoal && <StretchGoalCard goal={result.stretchGoal} />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── AUDIT VIEW ───────────────────────────────────────────────────────────────
+
+function AuditView({ apiKey }) {
+  const [name, setName] = useState('');
+  const [taskId, setTaskId] = useState('');
+  const [description, setDescription] = useState('');
+  const [proofItems, setProofItems] = useState([]);
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [result, setResult] = useState(null);
+
+  const toggleProof = (item) => {
+    if (proofItems.includes(item)) setProofItems(proofItems.filter(i => i !== item));
+    else setProofItems([...proofItems, item]);
+  };
+
+  const handleSubmit = useCallback(async (e) => {
+    e.preventDefault();
+    if (!name.trim()) { setError('Please enter your name.'); return; }
+    if (!taskId.trim()) { setError('Please enter a Task ID.'); return; }
+    if (!description.trim()) { setError('Please describe what you did.'); return; }
+    if (!apiKey.trim()) { setError('No API key found. Open API Configuration above and paste your Gemini key.'); return; }
+
+    setLoading(true); setError(null); setResult(null);
+
+    const userMessage = `Participant Name: ${name}
+Task ID submitted: ${taskId.trim().toUpperCase()}
+What was done: ${description}
+Proof available: ${proofItems.length > 0 ? proofItems.join(', ') : 'None specified'}
+Additional notes: ${notes.trim() || 'None'}
+
+Please assess this submission and give a verdict.`;
+
+    try {
+      const rawText = await callGemini(apiKey.trim(), AUDIT_SYSTEM_PROMPT, userMessage, 1500);
+      const parsed = extractAndParseJSON(rawText);
+      setResult(parsed);
+    } catch (err) {
+      setError(err.message || 'An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [name, taskId, description, proofItems, notes, apiKey]);
+
+  return (
+    <div className="space-y-6">
+      <form onSubmit={handleSubmit} className="glass-card rounded-2xl p-6 space-y-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="section-label block mb-2">YOUR NAME</label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g. James Okafor"
+              className="matrix-input w-full rounded-lg px-4 py-2.5 text-sm"
+            />
+          </div>
+          <div>
+            <label className="section-label block mb-2">TASK ID</label>
+            <input
+              type="text"
+              value={taskId}
+              onChange={e => setTaskId(e.target.value)}
+              placeholder="e.g. T03, C07, S06"
+              className="matrix-input w-full rounded-lg px-4 py-2.5 text-sm font-mono"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="section-label block mb-2">WHAT DID YOU DO? (TASK DESCRIPTION)</label>
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder="Describe in detail what you completed for this task…"
+            rows={4}
+            className="matrix-input w-full rounded-lg px-4 py-2.5 text-sm resize-none leading-relaxed"
+          />
+        </div>
+
+        <div>
+          <p className="section-label mb-2">PROOF AVAILABLE — TICK ALL THAT APPLY</p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {PROOF_OPTIONS.map(item => (
+              <label key={item} className="matrix-checkbox flex items-center gap-2 cursor-pointer group">
+                <input type="checkbox" checked={proofItems.includes(item)} onChange={() => toggleProof(item)} />
+                <span className="text-xs text-gray-300 group-hover:text-[#00FF41] transition-colors">{item}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="section-label block mb-2">ANY NOTES OR CONTEXT (OPTIONAL)</label>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="Any extra context, explanations, or circumstances you'd like the auditor to know…"
+            rows={3}
+            className="matrix-input w-full rounded-lg px-4 py-2.5 text-sm resize-none leading-relaxed"
+          />
+        </div>
+
+        {error && (
+          <ErrorState message={error} onDismiss={() => setError(null)} />
+        )}
+
+        <button type="submit" disabled={loading} className="matrix-btn w-full py-3.5 rounded-xl text-sm">
+          {loading ? '⟳ Processing…' : '🔍 Check My Submission'}
+        </button>
+      </form>
+
+      {loading && <LoadingState />}
+
+      {result && !loading && (
+        <AuditResultCard result={result} />
+      )}
+    </div>
+  );
+}
+
+// ─── APP ROOT ─────────────────────────────────────────────────────────────────
+
+const DEFAULT_GEMINI_KEY = 'AIzaSyAiYuWVVN21tPW28xNq6qqprdx3CtyKOcY';
+
+function App() {
+  const [tab, setTab] = useState('recommender');
+  const [apiKey, setApiKey] = useState(DEFAULT_GEMINI_KEY);
+  const [showSettings, setShowSettings] = useState(false);
+
+  return (
+    <div className="min-h-screen font-inter">
+      {/* Header */}
+      <header className="border-b border-[#00FF41]/10 bg-black/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-3xl mx-auto px-4 py-3">
+          {/* Logo */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-[#00FF41]/10 border border-[#00FF41]/25 flex items-center justify-center flex-shrink-0 animate-glow-pulse">
+                <span className="text-[#00FF41] text-sm">✦</span>
+              </div>
+              <div>
+                <h1 className="font-orbitron font-bold text-white text-xs sm:text-sm tracking-wider leading-tight text-glow-sm">
+                  GO-BRICS
+                </h1>
+                <p className="text-[#00FF41]/50 text-[9px] font-mono tracking-[0.2em] leading-tight">
+                  TASK INTELLIGENCE TOOL
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#00FF41] animate-pulse-green" />
+              <span className="text-[#00FF41]/40 text-[9px] font-mono tracking-widest">ONLINE</span>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex border-b border-[#00FF41]/10">
+            <button
+              id="tab-recommender"
+              onClick={() => setTab('recommender')}
+              className={`tab-btn flex-1 py-2 px-3 text-center ${tab === 'recommender' ? 'active text-[#00FF41]' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+              ⚡ TASK RECOMMENDER
+            </button>
+            <button
+              id="tab-audit"
+              onClick={() => setTab('audit')}
+              className={`tab-btn flex-1 py-2 px-3 text-center ${tab === 'audit' ? 'active text-[#00FF41]' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+              🔍 GBP AUDIT CHECKER
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-3xl mx-auto px-4 py-6">
+        {/* Mode description */}
+        {tab === 'recommender' ? (
+          <div className="mb-5 animate-fade-in">
+            <p className="text-gray-400 text-sm leading-relaxed">
+              Enter your profile below and our AI will analyse the full GO-BRICS task catalogue to recommend your best 5 tasks — ranked by fit and earning potential.
+            </p>
+          </div>
+        ) : (
+          <div className="mb-5 animate-fade-in">
+            <p className="text-gray-400 text-sm leading-relaxed">
+              Submit your completed task details and our AI auditor will assess whether your submission meets the official proof requirements and give you an instant eligibility verdict.
+            </p>
+          </div>
+        )}
+
+        {/* Settings */}
+        <SettingsPanel apiKey={apiKey} setApiKey={setApiKey} show={showSettings} setShow={setShowSettings} />
+
+        {/* Mode Views */}
+        {tab === 'recommender'
+          ? <RecommenderView key="recommender" apiKey={apiKey} />
+          : <AuditView key="audit" apiKey={apiKey} />
+        }
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-[#00FF41]/8 mt-12 py-6">
+        <div className="max-w-3xl mx-auto px-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-gray-700 text-[10px] font-mono tracking-wider">GO-BRICS BUSINESS LAB · TASK INTELLIGENCE SYSTEM</p>
+            <p className="text-gray-700 text-[10px] font-mono">Powered by Gemini 2.5 Flash · Free Tier</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

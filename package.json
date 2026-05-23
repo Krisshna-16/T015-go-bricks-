@@ -1,0 +1,11 @@
+{
+  "name": "go-brics-task-intelligence-tool",
+  "version": "1.0.0",
+  "description": "AI-powered task recommendation and GBP audit checker for GO-BRICS Business Lab",
+  "scripts": {
+    "dev": "npx --yes http-server . -p 3000 -o -c-1",
+    "start": "npx --yes http-server . -p 3000 -o -c-1"
+  },
+  "keywords": ["go-brics", "ai", "anthropic", "task-management"],
+  "license": "MIT"
+}
