@@ -685,6 +685,9 @@ function AuditResultCard({ result }) {
 
 // ─── GEMINI API HELPER (auto-fallback across models) ─────────────────────────
 
+// Model registry for failover handling. The algorithm iterates through this list
+// sequentially to establish connections. The newest Gemini 2.5 series model is 
+// placed first for default execution, followed by secondary models for fallback support.
 const GEMINI_MODELS = [
   { name: 'gemini-2.5-flash', systemSupport: true },
   { name: 'gemini-2.0-flash', systemSupport: true },
