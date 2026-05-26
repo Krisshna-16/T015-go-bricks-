@@ -1021,11 +1021,15 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
+    // Dynamic runtime configuration: attempts to fetch a local .env configuration file.
+    // This allows seamless local developer workflow without hardcoding credentials in
+    // public source code repositories.
     async function fetchKey() {
       try {
         const resp = await fetch('/.env');
         if (resp.ok) {
           const text = await resp.text();
+          // Regex to parse key-value patterns (handles optional quotes and spacing)
           const match = text.match(/GEMINI_API_KEY\s*=\s*['"]?([a-zA-Z0-9_-]+)['"]?/);
           if (match && match[1]) {
             setApiKey(match[1]);
