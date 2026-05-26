@@ -1,4 +1,6 @@
 # GO-BRICS Task Intelligence Tool
+[![License: MIT](https://img.shields.shields.shields.github.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 An AI-powered task recommendation and GBP audit system designed for GO-BRICS Business Lab participants. This tool utilizes Google Gemini to analyze profiles, recommend optimal tasks, and audit completed task submissions.
 
 ---
