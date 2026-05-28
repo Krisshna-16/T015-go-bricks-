@@ -82,3 +82,17 @@ The underlying algorithm evaluates the catalogued tasks against the participant'
 * **The Fix**:
   * Open the settings panel and verify that the API key entered is correct.
   * Go to the [Google Cloud API Library](https://console.cloud.google.com/apis/library), search for **"Generative Language API"**, and ensure it is marked as **"Enabled"** for the project tied to your key.
+
+---
+
+## 📂 Directory Layout
+
+```text
+go-brics-tool/
+├── index.html        # Core React Application & Styling
+├── package.json      # Dev dependencies & launch scripts
+├── README.md         # Manual & Technical Architecture
+├── LICENSE           # MIT License
+├── .env.example      # Local environment variables template
+└── .gitignore        # Staging blacklist rules for local secrets
+```
